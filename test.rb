@@ -4,7 +4,7 @@ require 'hpricot'
 require 'open-uri'
 require 'chronic'
 require 'twitter'
-require 'password.rb'
+require 'password'
 
 class RoadCondition
   attr_accessor :label,:location, :description, :date, :color
@@ -65,42 +65,36 @@ end
 
 conditions=[]
 
-# last_update = Chronic.parse('yesterday at 10pm')
-last_update = Chronic.parse('1200 minutes ago')
+last_update = Chronic.parse('10400 minutes ago')
 puts "last update: #{last_update} #{last_update.class}"
 
 # http://www.511ia.org/default.asp?area=IA_statewide&display=all&date=&textOnly=true
 # http://www.511ia.org/default.asp?display=all&area=IA_Central&date=&textOnly=True
-# File.readlines('test.html').to_s
-doc = Hpricot(File.readlines('test.html').to_s)
+# doc = Hpricot(File.readlines('test.html').to_s)
+doc = Hpricot(open("http://www.511ia.org/default.asp?display=all&area=IA_Central&date=&textOnly=True"))
 
-# doc = Hpricot(open("http://www.511ia.org/default.asp?display=all&area=IA_Central&date=&textOnly=True"))
+# Read how to produce the HTTP Request Header at:
+#    http://www.ruby-doc.org/stdlib/libdoc/open-uri/rdoc/classes/OpenURI.html
+
 table_rows = (doc/"table/tr").reject{|r| r.attributes['class'].nil? || r.attributes['class'] == 'spacer'};
-# table_rows = table_rows[0..250]
-# table_rows.each{|r| puts r.attributes['class']}
 
 i=0
 while(i < (table_rows.size - 1)) do
-  # puts i
-    rc = RoadCondition.new
-    rc.label = (table_rows[i]/"td/font/b").inner_html.strip
-    rc.color = (table_rows[i]/"td").first.attributes['bgcolor']
-    rc.location = (table_rows[i+1]/"td/font/b").inner_html.strip
-    rc.description = (table_rows[i+1]/"td/font/*")[2].to_s.strip
-    rc.date = Chronic.parse((table_rows[i+1]/"td/font/*").last.to_s.gsub('last updated','').strip, :context => :past)
-    conditions << rc
+  rc = RoadCondition.new
+  rc.label = (table_rows[i]/"td/font/b").inner_html.strip
+  rc.color = (table_rows[i]/"td").first.attributes['bgcolor']
+  rc.location = (table_rows[i+1]/"td/font/b").inner_html.strip
+  rc.description = (table_rows[i+1]/"td/font/*")[2].to_s.strip
+  rc.date = Chronic.parse((table_rows[i+1]/"td/font/*").last.to_s.gsub('last updated','').strip, :context => :past)
+  conditions << rc
   i+=2
 end
 
-# puts conditions.inspect
-
-
 conditions = conditions.reject{|c| c.older_than?(last_update) or c.level_to_i <= 3}
-# puts conditions[1].to_s
 
 conditions.each do |c|
   puts c.to_s
-#   # Twitter::Base.new(TWITTER_EMAIL, TWITTER_PASSWORD).update(c.to_s)
+  # Twitter::Base.new(TWITTER_EMAIL, TWITTER_PASSWORD).update(c.to_s)
 end
 
 
