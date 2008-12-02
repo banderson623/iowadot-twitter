@@ -8,7 +8,8 @@ require 'password'
 
 class RoadCondition
   attr_accessor :label,:location, :description, :date, :color
-  FROM = 'http://bit.ly/R0eg'
+  attr_writer :raw_date
+  FROM = 'http://bit.ly/BTrn'
   def type
     @label.split('-').first.strip
   end
@@ -36,6 +37,32 @@ class RoadCondition
     end
   end
   
+  def condition
+    case type.downcase
+    when "road restrictions"
+      :restriction
+    when "normal pavement conditions"
+      :normal
+    when "wet pavement conditions"
+      :wet
+    when "travel not advised"
+      :not_advised
+    when "mostly covered conditions"
+      :mostly_covered
+    else
+      type.downcase.to_sym
+    end
+  end
+  
+  def is_one_of_these_levels(array_of_levels)
+    array_of_levels.map{|i| i.to_sym}.include?(level.to_sym)
+  end
+  
+  def is_one_of_these_conditions(array_of_conditions)
+    array_of_conditions.map{|i| i.to_sym}.include?(condition)
+  end
+  
+  
   def level_to_i
     case level
     when :red
@@ -59,13 +86,25 @@ class RoadCondition
   end
     
   def to_s
-    "#{type.upcase} on #{location}. #{description} (#{nice_date})"
+    "[#{type}] #{location}. #{description} (#{nice_date})"
   end
+  
+  # def to_tweet
+  #   length = 140
+  #   
+  #   if to_s.length > length
+  #     to_s[0,(length - (FROM.length+3))] + '.. ' + FROM
+  #   else
+  #     to_s
+  #   end
+  # end
+  
 end 
 
+CONDITIONS_NOT_TO_SHOW = [:normal]
 conditions=[]
 
-last_update = Chronic.parse('10400 minutes ago')
+last_update = Chronic.parse('15 minutes ago')
 puts "last update: #{last_update} #{last_update.class}"
 
 # http://www.511ia.org/default.asp?area=IA_statewide&display=all&date=&textOnly=true
@@ -85,13 +124,15 @@ while(i < (table_rows.size - 1)) do
   rc.color = (table_rows[i]/"td").first.attributes['bgcolor']
   rc.location = (table_rows[i+1]/"td/font/b").inner_html.strip
   rc.description = (table_rows[i+1]/"td/font/*")[2].to_s.strip
+  # rc.raw_date = (table_rows[i+1]/"td/font/*").last.to_s.gsub('last updated','').strip
   rc.date = Chronic.parse((table_rows[i+1]/"td/font/*").last.to_s.gsub('last updated','').strip, :context => :past)
   conditions << rc
   i+=2
 end
 
-conditions = conditions.reject{|c| c.older_than?(last_update) or c.level_to_i <= 3}
-
+conditions = conditions.reject{|c| c.older_than?(last_update)}
+conditions = conditions.reject{|c| c.is_one_of_these_conditions(CONDITIONS_NOT_TO_SHOW)}
+# conditions = [conditions.first]
 conditions.each do |c|
   puts c.to_s
   # Twitter::Base.new(TWITTER_EMAIL, TWITTER_PASSWORD).update(c.to_s)
