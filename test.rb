@@ -22,21 +22,6 @@ class RoadCondition
     @date.strftime("%I:%M%p")
   end
   
-  def level
-    case @color
-    when "FF0000"
-      :red
-    when "FF99FF"
-      :purple
-    when "FF9933"
-      :orange
-    when "FFFF00"
-      :yellow
-    when "0000FF"
-      :blue
-    end
-  end
-  
   def condition
     case type.downcase
     when "road restrictions"
@@ -54,34 +39,11 @@ class RoadCondition
     end
   end
   
-  def is_one_of_these_levels(array_of_levels)
-    array_of_levels.map{|i| i.to_sym}.include?(level.to_sym)
-  end
-  
   def is_one_of_these_conditions(array_of_conditions)
     array_of_conditions.map{|i| i.to_sym}.include?(condition)
   end
   
-  
-  def level_to_i
-    case level
-    when :red
-      5
-    when :orange
-      4
-    when :purple
-      3
-    when :blue
-      2
-    when :yellow
-      1
-    else
-      0
-    end
-  end
-  
   def older_than?(some_date)
-    # puts "comparing #{date} to #{some_date}"
     return date < some_date
   end
     
@@ -89,22 +51,12 @@ class RoadCondition
     "[#{type}] #{location}. #{description} (#{nice_date})"
   end
   
-  # def to_tweet
-  #   length = 140
-  #   
-  #   if to_s.length > length
-  #     to_s[0,(length - (FROM.length+3))] + '.. ' + FROM
-  #   else
-  #     to_s
-  #   end
-  # end
-  
 end 
 
 CONDITIONS_NOT_TO_SHOW = [:normal]
 conditions=[]
 
-last_update = Chronic.parse('15 minutes ago')
+last_update = Chronic.parse('60 minutes ago')
 puts "last update: #{last_update} #{last_update.class}"
 
 # http://www.511ia.org/default.asp?area=IA_statewide&display=all&date=&textOnly=true
